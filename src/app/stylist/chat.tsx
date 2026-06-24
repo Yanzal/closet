@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, LayoutChangeEvent, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { OutfitPreview } from '@/components/outfit/outfit-preview';
@@ -15,7 +15,7 @@ import { palette, Radius, Spacing } from '@/constants/theme';
 import { generateConfigured } from '@/lib/ai/config';
 import { appleIntelligenceAvailable } from '@/lib/ai/native';
 import { remoteGenerate } from '@/lib/ai/remote';
-import { buildLookNodes, suggestOutfitSmart, type Warmth } from '@/lib/ai/stylist';
+import { buildLookNodes, suggestOutfit, suggestOutfitSmart, type Warmth } from '@/lib/ai/stylist';
 import { addDaysKey, fmtDayShort, todayKey } from '@/lib/date';
 import { isOwned } from '@/lib/owned';
 import type { ClothingItem, PlacedNode } from '@/lib/types';
@@ -41,6 +41,9 @@ function warmthFromWeather(w: DayWeather | null): Warmth {
 
 const TITLES = ['Casual & Trendy', 'Effortless Everyday', 'Smart & Polished', 'Cosy Layers', 'Clean & Minimal'];
 
+const OCCASION_TAGS = ['Daily', 'School', 'Work', 'Travel', 'Party', 'Date'];
+const STYLE_TAGS = ['Casual', 'Classic', 'Street', 'Modern', 'Minimal'];
+
 export default function StylistChatScreen() {
   const router = useRouter();
   const items = useCloset((s) => s.items);
@@ -56,6 +59,16 @@ export default function StylistChatScreen() {
   const [thinking, setThinking] = useState(false);
   const [w, setW] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+
+  // Outfit Inspiration: curated-feeling looks the user can browse by occasion / style.
+  const [inspOcc, setInspOcc] = useState(OCCASION_TAGS[0]);
+  const [inspStyle, setInspStyle] = useState(STYLE_TAGS[0]);
+  const inspLooks = useMemo(() => {
+    if (owned.length < 2) return [] as PlacedNode[][];
+    const warm = warmthFromWeather(weather);
+    return [0, 1].map(() => buildLookNodes(suggestOutfit(items, warm)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length, inspOcc, inspStyle]);
 
   useEffect(() => {
     if (!homeCity) return;
@@ -126,7 +139,16 @@ export default function StylistChatScreen() {
       ? 'Styled by your AI endpoint'
       : 'Styled from your closet — on device';
 
-  const header = <TopBar left={<BackTitle title="Personal stylist" onBack={() => router.back()} />} />;
+  const header = (
+    <TopBar
+      left={<BackTitle title="Personal stylist" onBack={() => router.back()} />}
+      right={
+        <Pressable onPress={() => router.push('/stylist/settings')} style={styles.settingsBtn}>
+          <Txt variant="caption">Styling settings</Txt>
+        </Pressable>
+      }
+    />
+  );
 
   return (
     <Screen header={header} scroll={false} bottomInset={false}>
@@ -165,6 +187,10 @@ export default function StylistChatScreen() {
             <Txt variant="small" color="textMuted" style={{ textAlign: 'center' }}>
               Tell me the occasion or vibe and I'll pull a look from your wardrobe.
             </Txt>
+            <Pressable onPress={() => router.push('/stylist/quiz')} style={styles.quizBtn}>
+              <Ionicons name="sparkles-outline" size={15} color={palette.blue} />
+              <Txt variant="small" color="accent">Take the style quiz</Txt>
+            </Pressable>
           </View>
         ) : null}
 
@@ -190,6 +216,33 @@ export default function StylistChatScreen() {
           <View style={styles.thinking}>
             <ActivityIndicator color={palette.blue} />
             <Txt variant="small" color="accent">Scanning your wardrobe…</Txt>
+          </View>
+        ) : null}
+
+        {inspLooks.length > 0 ? (
+          <View style={styles.inspBlock}>
+            <Txt variant="h2" style={{ marginBottom: Spacing.sm }}>Outfit Inspiration</Txt>
+            <Txt variant="label" color="textSecondary">Occasion</Txt>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagRow}>
+              {OCCASION_TAGS.map((t) => (
+                <Chip key={t} label={t} selected={inspOcc === t} onPress={() => setInspOcc(t)} />
+              ))}
+            </ScrollView>
+            <Txt variant="label" color="textSecondary" style={{ marginTop: Spacing.md }}>Style</Txt>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tagRow}>
+              {STYLE_TAGS.map((t) => (
+                <Chip key={t} label={t} selected={inspStyle === t} onPress={() => setInspStyle(t)} />
+              ))}
+            </ScrollView>
+            {w > 0 ? (
+              <View style={styles.inspGrid}>
+                {inspLooks.map((nodes, i) => (
+                  <Pressable key={i} style={styles.inspCard} onPress={() => router.push('/stylist/suggest')}>
+                    <OutfitPreview items={items} nodes={nodes} size={(w - Spacing.md) / 2} />
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </View>
         ) : null}
       </ScrollView>
@@ -250,6 +303,12 @@ const styles = StyleSheet.create({
   },
   lookCard: { borderRadius: Radius.md, overflow: 'hidden', backgroundColor: palette.white },
   thinking: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: Spacing.md },
+  settingsBtn: { borderWidth: 1, borderColor: palette.hairline, borderRadius: Radius.pill, paddingHorizontal: 12, paddingVertical: 7 },
+  quizBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: Spacing.md, backgroundColor: palette.blueSoft, paddingHorizontal: 14, paddingVertical: 9, borderRadius: Radius.pill },
+  inspBlock: { marginTop: Spacing.xl, paddingTop: Spacing.lg, borderTopWidth: 1, borderTopColor: palette.hairline },
+  tagRow: { gap: 8, paddingVertical: Spacing.sm },
+  inspGrid: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
+  inspCard: { flex: 1, aspectRatio: 1, borderRadius: Radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: palette.hairline, backgroundColor: palette.white },
   composer: { gap: Spacing.sm, paddingTop: Spacing.sm, borderTopWidth: 1, borderTopColor: palette.hairline },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   send: { backgroundColor: palette.blue, borderRadius: Radius.pill, width: 44, height: 44 },

@@ -7,7 +7,7 @@ import type { Session } from '@supabase/supabase-js';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { supabase, supabaseEnabled } from '@/lib/supabase';
-import { pullAll, startSync, stopSync } from '@/lib/sync';
+import { flushNow, pullAll, startSync, stopSync } from '@/lib/sync';
 import { useCloset } from '@/store/closet';
 
 interface AuthValue {
@@ -60,10 +60,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (uid) {
       syncingFor.current = uid;
       setSynced(false);
-      useCloset.getState().wipeLocal(); // clear any previous user's cached data
+      const store = useCloset.getState();
+      // Same user (or first sign-in on a fresh device): keep local-only changes and merge.
+      // A different user: replace, so no data leaks between accounts on a shared device.
+      const sameUser = !store.ownerUid || store.ownerUid === uid;
+      store.setOwnerUid(uid);
       (async () => {
-        await pullAll(uid);
+        await pullAll(uid, sameUser ? 'merge' : 'replace');
         startSync(uid);
+        await flushNow(uid); // push anything local that wasn't in the cloud yet
         setSynced(true);
       })();
     } else {
@@ -71,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       stopSync();
       setSynced(false);
       useCloset.getState().wipeLocal();
+      useCloset.getState().setOwnerUid(undefined);
     }
   }, [session?.user?.id]);
 

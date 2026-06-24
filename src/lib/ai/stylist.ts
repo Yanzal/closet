@@ -17,6 +17,7 @@ function sample<T>(arr: T[]): T | undefined {
 
 /** Pleasant default placement per category, used to turn a suggested look into saveable nodes. */
 const LAYOUT: Record<Category, { cx: number; cy: number; scale: number }> = {
+  Headwear: { cx: 0.5, cy: 0.12, scale: 0.7 },
   Tops: { cx: 0.43, cy: 0.32, scale: 1.1 },
   Outerwear: { cx: 0.62, cy: 0.34, scale: 1.2 },
   Bottoms: { cx: 0.45, cy: 0.62, scale: 1.1 },

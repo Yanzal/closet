@@ -9,6 +9,7 @@ export const CATEGORIES: { key: Category; label: string; emoji: string; tint: st
   { key: 'Dresses', label: 'Dresses', emoji: '👗', tint: palette.pink },
   { key: 'Shoes', label: 'Shoes', emoji: '👟', tint: palette.mist },
   { key: 'Bags', label: 'Bags', emoji: '👜', tint: palette.mint },
+  { key: 'Headwear', label: 'Headwear', emoji: '🧢', tint: palette.sky },
   { key: 'Accessories', label: 'Accessories', emoji: '🕶️', tint: palette.blueSoft },
 ];
 
@@ -16,6 +17,22 @@ export const CATEGORY_KEYS: Category[] = CATEGORIES.map((c) => c.key);
 
 export function categoryMeta(key: Category) {
   return CATEGORIES.find((c) => c.key === key) ?? CATEGORIES[0];
+}
+
+/** Optional finer types within each category (shown in the item detail view). */
+export const SUBCATEGORIES: Record<Category, string[]> = {
+  Tops: ['T-shirt', 'Shirt', 'Blouse', 'Sweater', 'Hoodie', 'Tank', 'Polo'],
+  Bottoms: ['Jeans', 'Trousers', 'Shorts', 'Skirt', 'Leggings', 'Sweatpants'],
+  Outerwear: ['Jacket', 'Coat', 'Blazer', 'Parka', 'Cardigan', 'Vest'],
+  Dresses: ['Mini', 'Midi', 'Maxi', 'Jumpsuit'],
+  Shoes: ['Sneakers', 'Boots', 'Heels', 'Flats', 'Sandals', 'Loafers'],
+  Bags: ['Tote', 'Crossbody', 'Backpack', 'Clutch', 'Shoulder'],
+  Headwear: ['Cap', 'Beanie', 'Hat', 'Bucket hat', 'Visor'],
+  Accessories: ['Sunglasses', 'Belt', 'Scarf', 'Watch', 'Jewelry', 'Gloves'],
+};
+
+export function subcategoriesFor(category: Category): string[] {
+  return SUBCATEGORIES[category] ?? [];
 }
 
 /** Color swatches offered during tagging. */

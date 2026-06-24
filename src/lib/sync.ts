@@ -40,17 +40,28 @@ function groups() {
   };
 }
 
-function seedSnapshot() {
-  const g = groups();
+/** Seed the "last synced" snapshot from the cloud data, so local-only rows are seen as new and pushed. */
+function seedSnapshotFrom(snap: RemoteSnapshot) {
+  const cloud: Record<Table, WithId[]> = {
+    items: snap.items,
+    collections: snap.collections,
+    outfits: snap.outfits,
+    calendar: snap.calendar,
+    trips: snap.trips,
+  };
   for (const t of TABLES) {
-    last[t] = new Map(g[t].map((o) => [o.id, JSON.stringify(o)]));
+    last[t] = new Map(cloud[t].map((o) => [o.id, JSON.stringify(o)]));
   }
-  const s = useCloset.getState();
-  lastProfile = JSON.stringify({ name: s.profileName, settings: s.settings });
+  lastProfile = JSON.stringify({ name: snap.profileName ?? '', settings: snap.settings ?? {} });
 }
 
-/** Load the user's data from the cloud into the store. Returns false on failure (keeps local cache). */
-export async function pullAll(userId: string): Promise<boolean> {
+/**
+ * Load the user's data from the cloud. `mode: 'merge'` keeps local-only (unsynced) rows for the same
+ * user; `mode: 'replace'` overwrites everything (used when a different user signs in). Returns false
+ * on failure (keeps the local cache). The snapshot is seeded from the cloud, so anything local but not
+ * yet uploaded gets pushed on the next flush.
+ */
+export async function pullAll(userId: string, mode: 'merge' | 'replace' = 'merge'): Promise<boolean> {
   const sb = supabase;
   if (!sb) return false;
   try {
@@ -69,12 +80,18 @@ export async function pullAll(userId: string): Promise<boolean> {
       calendar: pick(3) as RemoteSnapshot['calendar'],
       trips: pick(4) as RemoteSnapshot['trips'],
     };
-    useCloset.getState().hydrateRemote(snap);
-    seedSnapshot();
+    if (mode === 'replace') useCloset.getState().hydrateRemote(snap);
+    else useCloset.getState().mergeRemote(snap);
+    seedSnapshotFrom(snap);
     return true;
   } catch {
     return false;
   }
+}
+
+/** Push any pending local changes to the cloud now (e.g. right after a merge-pull). */
+export async function flushNow(userId: string) {
+  await flush(userId);
 }
 
 async function flush(userId: string) {
@@ -92,9 +109,12 @@ async function flush(userId: string) {
     }
     const removed = [...lm.keys()].filter((id) => !curIds.has(id));
 
-    if (upserts.length) {
-      const { error } = await sb.from(table).upsert(upserts, { onConflict: 'user_id,id' });
-      if (!error) for (const u of upserts) lm.set(u.id, JSON.stringify(u.data));
+    // Upsert one row at a time: item rows embed a base64 photo and can be large, so a single
+    // batched request risks exceeding the API size limit (which would drop the whole batch).
+    // Per-row also means one failure never blocks the others.
+    for (const u of upserts) {
+      const { error } = await sb.from(table).upsert(u, { onConflict: 'user_id,id' });
+      if (!error) lm.set(u.id, JSON.stringify(u.data));
     }
     if (removed.length) {
       const { error } = await sb.from(table).delete().eq('user_id', userId).in('id', removed);

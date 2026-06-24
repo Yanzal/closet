@@ -7,6 +7,7 @@ export type Category =
   | 'Dresses'
   | 'Shoes'
   | 'Bags'
+  | 'Headwear'
   | 'Accessories';
 
 export type Season = 'Spring' | 'Summer' | 'Fall' | 'Winter';
@@ -17,6 +18,8 @@ export interface ClothingItem {
   /** data: URL (web) or file URI (native). Empty string => render a placeholder tile. */
   photoUri: string;
   category: Category;
+  /** Optional finer type within the category, e.g. 'Cap' under Headwear, 'Shorts' under Bottoms. */
+  subcategory?: string;
   brand?: string;
   /** Color names chosen during tagging, e.g. ['Black', 'Cream']. */
   colors: string[];
@@ -75,6 +78,27 @@ export interface AppSettings {
   geoChecked?: boolean;
   /** True once we've asked the user for their name after first sign-in. */
   namePrompted?: boolean;
+  // --- stylist personalization (Styling settings) ---
+  tempSensitivity?: 'cold' | 'neutral' | 'warm';
+  stylistNote?: string;
+  preferredBrands?: string;
+  styleProfile?: StyleProfile;
+}
+
+/** Answers from the style onboarding quiz, used to personalize suggestions. */
+export interface StyleProfile {
+  gender?: string;
+  country?: string;
+  lifestyle?: string;
+  hairColor?: string;
+  eyeColor?: string;
+  colorSeason?: string;
+  bodyType?: string;
+  heightCm?: number;
+  weightKg?: number;
+  goToStyles?: string[];
+  priceRange?: string;
+  completedAt?: string;
 }
 
 export interface Collection {

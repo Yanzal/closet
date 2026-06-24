@@ -16,7 +16,7 @@ import { Screen } from '@/components/ui/screen';
 import { Txt } from '@/components/ui/text';
 import { TopBar } from '@/components/top-bar';
 import { palette, Radius, Spacing } from '@/constants/theme';
-import { CATEGORIES, COLOR_OPTIONS, colorHex, SEASONS } from '@/lib/categories';
+import { CATEGORIES, COLOR_OPTIONS, colorHex, SEASONS, subcategoriesFor } from '@/lib/categories';
 import { FITS, MATERIALS, OCCASIONS, PATTERNS, STYLES } from '@/lib/attributes';
 import type { Category, Season } from '@/lib/types';
 import { useCloset } from '@/store/closet';
@@ -46,6 +46,7 @@ export default function AddScreen() {
   const [processing, setProcessing] = useState(false);
   const [name, setName] = useState('');
   const [category, setCategory] = useState<Category>('Tops');
+  const [subcategory, setSubcategory] = useState<string | undefined>();
   const [brand, setBrand] = useState('');
   const [colors, setColors] = useState<string[]>([]);
   const [seasons, setSeasons] = useState<Season[]>([]);
@@ -107,6 +108,7 @@ export default function AddScreen() {
       name: finalName,
       photoUri: photoUri ?? '',
       category,
+      subcategory,
       brand: brand.trim() || undefined,
       colors,
       seasons,
@@ -207,7 +209,23 @@ export default function AddScreen() {
               key={c.key}
               label={c.label}
               selected={category === c.key}
-              onPress={() => setCategory(c.key)}
+              onPress={() => {
+                setCategory(c.key);
+                setSubcategory(undefined);
+              }}
+            />
+          ))}
+        </View>
+      </Field>
+
+      <Field label="Type">
+        <View style={styles.wrap}>
+          {subcategoriesFor(category).map((s) => (
+            <Chip
+              key={s}
+              label={s}
+              selected={subcategory === s}
+              onPress={() => setSubcategory(subcategory === s ? undefined : s)}
             />
           ))}
         </View>

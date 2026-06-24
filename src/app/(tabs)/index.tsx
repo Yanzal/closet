@@ -161,9 +161,21 @@ export default function HomeScreen() {
         />
         <QuickAction
           label="Try On"
-          onPress={() => router.push({ pathname: '/stylist/[feature]', params: { feature: 'tryon' } })}
+          onPress={() => router.push('/stylist/tryon')}
           icon={<MaterialCommunityIcons name="hanger" size={22} color={palette.ink} />}
         />
+      </ScrollView>
+
+      {/* Popular features */}
+      <Txt variant="title" style={{ marginTop: Spacing.xl, marginBottom: Spacing.md }}>
+        Popular features
+      </Txt>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.featureRow}>
+        <FeatureTile emoji="➕" label="Add items" onPress={() => router.push('/add')} />
+        <FeatureTile emoji="🧍" label="Create Outfit" onPress={() => router.push('/outfit/builder')} />
+        <FeatureTile emoji="📅" label="Calendar" onPress={() => router.push('/calendar')} />
+        <FeatureTile emoji="✨" label="Beautify" onPress={() => router.push('/add-batch')} />
+        <FeatureTile emoji="📊" label="Style stats" onPress={() => router.push('/stats')} />
       </ScrollView>
 
       {/* Weather-aware looks */}
@@ -231,6 +243,15 @@ function buildLooks(items: ClothingItem[]): ClothingItem[][] {
   return looks;
 }
 
+function FeatureTile({ emoji, label, onPress }: { emoji: string; label: string; onPress: () => void }) {
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.featureTile, pressed ? { opacity: 0.7 } : null]}>
+      <Txt style={{ fontSize: 26 }}>{emoji}</Txt>
+      <Txt variant="caption" color="textSecondary" numberOfLines={1}>{label}</Txt>
+    </Pressable>
+  );
+}
+
 function BigCard({ title, emoji, tint, onPress }: { title: string; emoji: string; tint: string; onPress: () => void }) {
   return (
     <Pressable style={{ flex: 1 }} onPress={onPress}>
@@ -289,6 +310,17 @@ const styles = StyleSheet.create({
   bigRow: { flexDirection: 'row', gap: Spacing.md },
   bigCard: { height: 112, padding: Spacing.md, justifyContent: 'space-between' },
   quickRow: { gap: 6, paddingVertical: Spacing.lg },
+  featureRow: { gap: Spacing.md, paddingBottom: 4 },
+  featureTile: {
+    width: 92,
+    height: 92,
+    borderRadius: Radius.lg,
+    backgroundColor: palette.cloud,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingHorizontal: 6,
+  },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 6, marginBottom: Spacing.md },
   lookRow: { gap: Spacing.md, paddingBottom: 4 },
   lookCard: { width: 150, padding: 10 },

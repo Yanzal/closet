@@ -44,6 +44,8 @@ interface ClosetState {
   hydrated: boolean;
   /** True after first-run seeding so we never re-seed over a user's emptied closet. */
   initialized: boolean;
+  /** The Supabase user id this local cache belongs to (for safe user-switching). */
+  ownerUid?: string;
   profileName: string;
   settings: AppSettings;
 
@@ -80,11 +82,20 @@ interface ClosetState {
 
   resetToSeed: () => void;
   clearAll: () => void;
-  /** Replace the whole local store with a signed-in user's cloud data. */
+  /** Replace the whole local store with a signed-in user's cloud data (used when switching users). */
   hydrateRemote: (snapshot: RemoteSnapshot) => void;
+  /** Merge cloud data into local, keeping local-only (not-yet-synced) rows (same user). */
+  mergeRemote: (snapshot: RemoteSnapshot) => void;
   /** Wipe all local data (used on sign-out so the next user starts clean). */
   wipeLocal: () => void;
+  setOwnerUid: (uid: string | undefined) => void;
   _markHydrated: () => void;
+}
+
+/** Union by id: cloud rows win for shared ids; local-only rows (unsynced) are preserved. */
+function mergeById<T extends { id: string }>(cloud: T[], local: T[]): T[] {
+  const ids = new Set(cloud.map((c) => c.id));
+  return [...cloud, ...local.filter((l) => !ids.has(l.id))];
 }
 
 export const useCloset = create<ClosetState>()(
@@ -217,6 +228,18 @@ export const useCloset = create<ClosetState>()(
           initialized: true,
         }),
 
+      mergeRemote: (snap) =>
+        set((s) => ({
+          profileName: snap.profileName || s.profileName,
+          settings: { ...s.settings, ...(snap.settings ?? {}) },
+          items: mergeById(snap.items, s.items),
+          collections: mergeById(snap.collections, s.collections),
+          outfits: mergeById(snap.outfits, s.outfits),
+          calendar: mergeById(snap.calendar, s.calendar),
+          trips: mergeById(snap.trips, s.trips),
+          initialized: true,
+        })),
+
       wipeLocal: () =>
         set({
           profileName: '',
@@ -229,6 +252,8 @@ export const useCloset = create<ClosetState>()(
           initialized: true,
         }),
 
+      setOwnerUid: (uid) => set({ ownerUid: uid }),
+
       _markHydrated: () => set({ hydrated: true }),
     }),
     {
@@ -236,6 +261,7 @@ export const useCloset = create<ClosetState>()(
       storage: createJSONStorage(() => storage),
       partialize: (s) => ({
         initialized: s.initialized,
+        ownerUid: s.ownerUid,
         profileName: s.profileName,
         settings: s.settings,
         items: s.items,
