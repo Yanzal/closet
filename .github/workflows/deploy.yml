@@ -32,11 +32,12 @@ jobs:
       - name: Export web build
         # Remote AI endpoints are read from repo variables (optional — empty is fine).
         env:
-          EXPO_PUBLIC_BEAUTIFY_URL: ${{ vars.EXPO_PUBLIC_BEAUTIFY_URL }}
-          EXPO_PUBLIC_GENERATE_URL: ${{ vars.EXPO_PUBLIC_GENERATE_URL }}
-          EXPO_PUBLIC_CLASSIFY_URL: ${{ vars.EXPO_PUBLIC_CLASSIFY_URL }}
-          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
-          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          # Accept the value from either the Variables or the Secrets tab, so it works wherever you put it.
+          EXPO_PUBLIC_BEAUTIFY_URL: ${{ vars.EXPO_PUBLIC_BEAUTIFY_URL || secrets.EXPO_PUBLIC_BEAUTIFY_URL }}
+          EXPO_PUBLIC_GENERATE_URL: ${{ vars.EXPO_PUBLIC_GENERATE_URL || secrets.EXPO_PUBLIC_GENERATE_URL }}
+          EXPO_PUBLIC_CLASSIFY_URL: ${{ vars.EXPO_PUBLIC_CLASSIFY_URL || secrets.EXPO_PUBLIC_CLASSIFY_URL }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL || secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY || secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
         run: npx expo export -p web
 
       - name: SPA + Pages fallbacks
