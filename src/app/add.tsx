@@ -109,7 +109,16 @@ export default function AddScreen() {
           <Ionicons name="close" size={26} color={palette.ink} />
         </IconButton>
       }
-      right={<Button title="Save" compact full={false} disabled={processing} onPress={onSave} />}
+      right={
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {!wishlist ? (
+            <IconButton onPress={() => router.replace('/add-batch')}>
+              <Ionicons name="copy-outline" size={22} color={palette.ink} />
+            </IconButton>
+          ) : null}
+          <Button title="Save" compact full={false} disabled={processing} onPress={onSave} />
+        </View>
+      }
     />
   );
 

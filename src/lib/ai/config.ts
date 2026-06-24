@@ -9,6 +9,9 @@
  */
 export const BEAUTIFY_URL = process.env.EXPO_PUBLIC_BEAUTIFY_URL ?? '';
 export const GENERATE_URL = process.env.EXPO_PUBLIC_GENERATE_URL ?? '';
+/** Vision endpoint that auto-tags a garment photo (category/name/colours/etc.). */
+export const CLASSIFY_URL = process.env.EXPO_PUBLIC_CLASSIFY_URL ?? '';
 
 export const beautifyConfigured = BEAUTIFY_URL.length > 0;
 export const generateConfigured = GENERATE_URL.length > 0;
+export const classifyConfigured = CLASSIFY_URL.length > 0;

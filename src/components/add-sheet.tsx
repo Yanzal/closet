@@ -35,6 +35,11 @@ export function AddSheet({ visible, onClose }: { visible: boolean; onClose: () =
               onPress={() => go('/add')}
             />
             <Row
+              icon={<Ionicons name="copy-outline" size={20} color={palette.ink} />}
+              label="Add multiple items"
+              onPress={() => go('/add-batch')}
+            />
+            <Row
               icon={<Ionicons name="heart-outline" size={20} color={palette.ink} />}
               label="Add to wishlist"
               onPress={() => go('/add?wishlist=1')}
