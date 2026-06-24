@@ -26,7 +26,7 @@ export default function TabsLayout() {
                 )}
               />
             </TabTrigger>
-            <TabTrigger name="closet" href="/closet" asChild>
+            <TabTrigger name="wardrobe" href="/wardrobe" asChild>
               <TabItem
                 label="Closet"
                 icon={(a) => (
