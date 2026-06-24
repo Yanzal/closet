@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { HeaderActions } from '@/components/header-actions';
@@ -15,9 +15,10 @@ import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Txt } from '@/components/ui/text';
 import { palette, Radius, Spacing } from '@/constants/theme';
-import { comingSoon } from '@/lib/ui';
+import { addDaysKey, fmtDayShort, todayKey } from '@/lib/date';
 import { isOwned } from '@/lib/owned';
 import type { ClothingItem } from '@/lib/types';
+import { DayWeather, geocodeCity, getDailyForecast, weatherInfo } from '@/lib/weather';
 import { ALL_CLOTHES_ID, useCloset } from '@/store/closet';
 
 const UNLOCK_AT = 5;
@@ -27,9 +28,32 @@ export default function HomeScreen() {
   const hydrated = useCloset((s) => s.hydrated);
   const items = useCloset((s) => s.items);
   const profileName = useCloset((s) => s.profileName);
+  const homeCity = useCloset((s) => s.settings.homeCity);
+  const tempUnit = useCloset((s) => s.settings.tempUnit);
   const name = profileName?.trim() || 'Guest';
 
   const owned = useMemo(() => items.filter(isOwned), [items]);
+
+  // Tomorrow's forecast for the weather-aware looks (Open-Meteo, free).
+  const tomorrow = addDaysKey(todayKey(), 1);
+  const [weather, setWeather] = useState<DayWeather | null>(null);
+  useEffect(() => {
+    if (!homeCity) {
+      setWeather(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const geo = await geocodeCity(homeCity);
+      if (!geo) return;
+      const days = await getDailyForecast(geo.latitude, geo.longitude, tomorrow, tomorrow);
+      if (!cancelled && days[0]) setWeather(days[0]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [homeCity, tomorrow]);
+  const toUnit = (c: number) => (tempUnit === 'F' ? Math.round((c * 9) / 5 + 32) : c);
 
   const recent = useMemo(
     () =>
@@ -113,7 +137,7 @@ export default function HomeScreen() {
           title="Style chat"
           emoji="💬"
           tint={palette.cloud}
-          onPress={() => router.push({ pathname: '/stylist/[feature]', params: { feature: 'chat' } })}
+          onPress={() => router.push('/stylist/chat')}
         />
       </View>
       <ScrollView
@@ -142,26 +166,35 @@ export default function HomeScreen() {
         />
       </ScrollView>
 
-      {/* Daily look */}
+      {/* Weather-aware looks */}
       {looks.length > 0 ? (
         <View style={{ marginTop: Spacing.sm }}>
-          <Txt variant="h2">Today&apos;s looks</Txt>
-          <Pressable style={styles.metaRow} onPress={() => comingSoon('Weather', 'Forecast — Milestone 3.')}>
+          <Txt variant="h2">Outfits for tomorrow&apos;s weather</Txt>
+          <Pressable style={styles.metaRow} onPress={() => router.push('/profile')}>
             <Ionicons name="calendar-outline" size={14} color={palette.gray} />
-            <Txt variant="small" color="textMuted">{todayLabel()}</Txt>
+            <Txt variant="small" color="textMuted">{fmtDayShort(tomorrow)}</Txt>
             <Txt variant="small" color="textMuted">·</Txt>
             <Ionicons name="location-outline" size={14} color={palette.gray} />
-            <Txt variant="small" color="textMuted">Set city</Txt>
-            <Txt variant="small" color="textMuted">·</Txt>
-            <Ionicons name="partly-sunny-outline" size={14} color={palette.gray} />
-            <Txt variant="small" color="textMuted">—°</Txt>
+            <Txt variant="small" color={homeCity ? 'textSecondary' : 'accent'}>{homeCity || 'Set city'}</Txt>
+            {homeCity ? (
+              <>
+                <Txt variant="small" color="textMuted">·</Txt>
+                {weather ? (
+                  <Txt variant="small" color="textSecondary">
+                    {weatherInfo(weather.code).emoji} {toUnit(weather.tMax)}° / {toUnit(weather.tMin)}°
+                  </Txt>
+                ) : (
+                  <Txt variant="small" color="textMuted">—°</Txt>
+                )}
+              </>
+            ) : null}
           </Pressable>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.lookRow}>
             {looks.map((look, i) => (
-              <LookCard key={i} items={look} onPress={() => comingSoon('Outfit suggestion', 'AI stylist — Milestone 5.')} />
+              <LookCard key={i} items={look} onPress={() => router.push('/stylist/suggest')} />
             ))}
           </ScrollView>
         </View>
@@ -196,10 +229,6 @@ function buildLooks(items: ClothingItem[]): ClothingItem[][] {
     if (pieces.length >= 2) looks.push(pieces.slice(0, 4));
   }
   return looks;
-}
-
-function todayLabel() {
-  return new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 function BigCard({ title, emoji, tint, onPress }: { title: string; emoji: string; tint: string; onPress: () => void }) {
