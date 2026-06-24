@@ -11,6 +11,7 @@ import { Ionicons } from '@/components/ui/icon';
 import { Screen } from '@/components/ui/screen';
 import { Txt } from '@/components/ui/text';
 import { palette, Radius, Spacing } from '@/constants/theme';
+import { useAuth } from '@/lib/auth';
 import { isOwned } from '@/lib/owned';
 import type { AppSettings } from '@/lib/types';
 import { comingSoon } from '@/lib/ui';
@@ -20,6 +21,7 @@ type SettingKey = keyof AppSettings | 'name';
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const { enabled: authEnabled, session, signOut } = useAuth();
   const items = useCloset((s) => s.items);
   const settings = useCloset((s) => s.settings);
   const profileName = useCloset((s) => s.profileName);
@@ -66,7 +68,9 @@ export default function ProfileScreen() {
         <Avatar name={name} size={56} />
         <View style={{ flex: 1 }}>
           <Txt variant="h2">{name}</Txt>
-          <Txt variant="small" color="textMuted">Local profile · on-device</Txt>
+          <Txt variant="small" color="textMuted">
+            {authEnabled && session?.user?.email ? `Synced · ${session.user.email}` : 'Local profile · on-device'}
+          </Txt>
         </View>
         <Pressable onPress={() => open('name', { kind: 'text', title: 'Your name', value: profileName, placeholder: 'Your name' })} hitSlop={8}>
           <Ionicons name="pencil" size={20} color={palette.gray} />
@@ -105,7 +109,26 @@ export default function ProfileScreen() {
         <Row label="Notifications" onPress={() => comingSoon('Notifications')} />
         <Row label="Outfit suggestion settings" onPress={() => comingSoon('Outfit suggestion settings')} />
         <Row label="FAQ & feedback" onPress={() => comingSoon('Customer service')} />
-        <Row label="Sign in / account" value="Local only" onPress={() => Alert.alert('Accounts', 'Sign-in and sync need a backend — set up later.')} last />
+        {authEnabled && session ? (
+          <Row
+            label="Sign out"
+            value={session.user?.email ?? undefined}
+            onPress={() =>
+              Alert.alert('Sign out', 'Sign out of this device? Your closet stays safe in the cloud.', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Sign out', style: 'destructive', onPress: () => void signOut() },
+              ])
+            }
+            last
+          />
+        ) : (
+          <Row
+            label="Sign in / account"
+            value="Local only"
+            onPress={() => Alert.alert('Accounts', 'Sign-in and sync turn on once the app owner configures it.')}
+            last
+          />
+        )}
       </Card>
 
       <EditSheet config={edit?.config ?? null} onClose={() => setEdit(null)} onSave={onSave} />

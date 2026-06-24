@@ -4,6 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import { storage } from '@/store/storage';
 import { uid } from '@/lib/id';
 import { makeSeed } from '@/lib/seed';
+import { supabaseEnabled } from '@/lib/supabase';
 import type {
   AppSettings,
   CalendarEntry,
@@ -13,6 +14,17 @@ import type {
   PlacedNode,
   Trip,
 } from '@/lib/types';
+
+/** Full wardrobe snapshot, used to load a signed-in user's data from the cloud. */
+export interface RemoteSnapshot {
+  profileName?: string;
+  settings?: AppSettings;
+  items: ClothingItem[];
+  collections: Collection[];
+  outfits: Outfit[];
+  calendar: CalendarEntry[];
+  trips: Trip[];
+}
 
 const DEFAULT_SETTINGS: AppSettings = {
   weekStartsMonday: false,
@@ -67,6 +79,10 @@ interface ClosetState {
 
   resetToSeed: () => void;
   clearAll: () => void;
+  /** Replace the whole local store with a signed-in user's cloud data. */
+  hydrateRemote: (snapshot: RemoteSnapshot) => void;
+  /** Wipe all local data (used on sign-out so the next user starts clean). */
+  wipeLocal: () => void;
   _markHydrated: () => void;
 }
 
@@ -188,6 +204,30 @@ export const useCloset = create<ClosetState>()(
       clearAll: () =>
         set({ items: [], collections: [], outfits: [], calendar: [], trips: [], initialized: true }),
 
+      hydrateRemote: (snap) =>
+        set({
+          profileName: snap.profileName ?? '',
+          settings: snap.settings ?? DEFAULT_SETTINGS,
+          items: snap.items,
+          collections: snap.collections,
+          outfits: snap.outfits,
+          calendar: snap.calendar,
+          trips: snap.trips,
+          initialized: true,
+        }),
+
+      wipeLocal: () =>
+        set({
+          profileName: '',
+          settings: DEFAULT_SETTINGS,
+          items: [],
+          collections: [],
+          outfits: [],
+          calendar: [],
+          trips: [],
+          initialized: true,
+        }),
+
       _markHydrated: () => set({ hydrated: true }),
     }),
     {
@@ -205,8 +245,9 @@ export const useCloset = create<ClosetState>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) return;
-        // First ever launch: populate the sample wardrobe.
-        if (!state.initialized) state.resetToSeed();
+        // First ever launch: populate the sample wardrobe — but not in auth builds, where a
+        // signed-in user's real data is pulled from the cloud instead.
+        if (!state.initialized && !supabaseEnabled) state.resetToSeed();
         state._markHydrated();
       },
     },
