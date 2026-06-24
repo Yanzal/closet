@@ -15,6 +15,8 @@ interface AuthValue {
   enabled: boolean;
   /** Still determining the initial session. */
   loading: boolean;
+  /** True once the signed-in user's cloud data has been pulled (so name checks are reliable). */
+  synced: boolean;
   session: Session | null;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -23,6 +25,7 @@ interface AuthValue {
 const AuthContext = createContext<AuthValue>({
   enabled: false,
   loading: false,
+  synced: false,
   session: null,
   signIn: async () => ({ error: 'Auth not configured' }),
   signOut: async () => {},
@@ -31,6 +34,7 @@ const AuthContext = createContext<AuthValue>({
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(supabaseEnabled);
+  const [synced, setSynced] = useState(false);
   const syncingFor = useRef<string | null>(null);
 
   useEffect(() => {
@@ -55,14 +59,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (uid) {
       syncingFor.current = uid;
+      setSynced(false);
       useCloset.getState().wipeLocal(); // clear any previous user's cached data
       (async () => {
         await pullAll(uid);
         startSync(uid);
+        setSynced(true);
       })();
     } else {
       syncingFor.current = null;
       stopSync();
+      setSynced(false);
       useCloset.getState().wipeLocal();
     }
   }, [session?.user?.id]);
@@ -70,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthValue = {
     enabled: supabaseEnabled,
     loading,
+    synced,
     session,
     signIn: async (email, password) => {
       if (!supabase) return { error: 'Auth not configured' };

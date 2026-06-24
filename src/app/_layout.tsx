@@ -7,20 +7,28 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { palette } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { useCloset } from '@/store/closet';
 
-/** Redirects between /login and the app based on auth state (no-op when auth is disabled). */
+/** Redirects between /login, /welcome and the app based on auth state (no-op when auth is disabled). */
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const { enabled, loading, session } = useAuth();
+  const { enabled, loading, synced, session } = useAuth();
+  const profileName = useCloset((s) => s.profileName);
+  const namePrompted = useCloset((s) => s.settings.namePrompted);
   const segments = useSegments();
   const router = useRouter();
 
   const onLogin = segments[0] === 'login';
+  const onWelcome = segments[0] === 'welcome';
+  // A freshly signed-in user with no name (and never prompted) gets the name screen once.
+  const needsName = !!session && synced && !profileName.trim() && !namePrompted;
 
   useEffect(() => {
     if (!enabled || loading) return;
     if (!session && !onLogin) router.replace('/login');
     else if (session && onLogin) router.replace('/');
-  }, [enabled, loading, session, onLogin, router]);
+    else if (needsName && !onWelcome) router.replace('/welcome');
+    else if (session && onWelcome && !needsName) router.replace('/');
+  }, [enabled, loading, session, onLogin, onWelcome, needsName, router]);
 
   if (enabled && loading) {
     return (

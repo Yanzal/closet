@@ -8,6 +8,9 @@
  */
 import { remoteRemoveBackground } from '@/lib/ai/remote';
 
+/** No-op on native (the web build warms up its in-browser model instead). */
+export function preloadBeautify(): void {}
+
 export async function removeBackgroundFallback(uri: string): Promise<string> {
   const remote = await remoteRemoveBackground(uri);
   return remote ?? uri;

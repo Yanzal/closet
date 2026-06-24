@@ -32,7 +32,8 @@ const DEFAULT_SETTINGS: AppSettings = {
   currency: '$',
   country: 'New Zealand',
   language: 'English',
-  homeCity: '',
+  homeCity: 'Auckland',
+  geoChecked: false,
 };
 
 export type NewItemInput = Omit<ClothingItem, 'id' | 'dateAdded' | 'wearCount' | 'lastWornAt'> &

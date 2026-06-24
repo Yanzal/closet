@@ -71,6 +71,10 @@ export interface AppSettings {
   country: string;
   language: string;
   homeCity?: string;
+  /** True once we've tried IP-based auto-location, so it only runs on a fresh install. */
+  geoChecked?: boolean;
+  /** True once we've asked the user for their name after first sign-in. */
+  namePrompted?: boolean;
 }
 
 export interface Collection {

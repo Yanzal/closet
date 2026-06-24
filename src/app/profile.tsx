@@ -106,7 +106,7 @@ export default function ProfileScreen() {
 
       <Txt variant="label" color="textMuted" style={styles.sectionLabel}>More</Txt>
       <Card>
-        <Row label="Notifications" onPress={() => comingSoon('Notifications')} />
+        <Row label="Notifications" onPress={() => router.push('/notifications')} />
         <Row label="Outfit suggestion settings" onPress={() => comingSoon('Outfit suggestion settings')} />
         <Row label="FAQ & feedback" onPress={() => comingSoon('Customer service')} />
         {authEnabled && session ? (

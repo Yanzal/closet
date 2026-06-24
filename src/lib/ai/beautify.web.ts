@@ -9,7 +9,12 @@
  */
 import { remoteRemoveBackground } from '@/lib/ai/remote';
 
-type ImglyModule = { removeBackground: (src: string) => Promise<Blob> };
+type ImglyConfig = {
+  device?: 'cpu' | 'gpu';
+  model?: 'isnet' | 'isnet_fp16' | 'isnet_quint8';
+  output?: { format?: string; quality?: number };
+};
+type ImglyModule = { removeBackground: (src: string, config?: ImglyConfig) => Promise<Blob> };
 
 let modPromise: Promise<ImglyModule> | null = null;
 
@@ -22,6 +27,19 @@ function loadImgly(): Promise<ImglyModule> {
   return modPromise;
 }
 
+// Speed-tuned config: the quantised model + WebGPU are dramatically faster than the default full
+// model on CPU, at a small quality cost that's invisible for closet thumbnails.
+const FAST_CONFIG: ImglyConfig = {
+  device: 'gpu',
+  model: 'isnet_quint8',
+  output: { format: 'image/png' },
+};
+
+/** Warm up the model in the background so the first real beautify is fast. Safe to call repeatedly. */
+export function preloadBeautify(): void {
+  void loadImgly().catch(() => {});
+}
+
 export async function removeBackgroundFallback(uri: string): Promise<string> {
   // Prefer a configured remote endpoint (fast; no main-thread model).
   const remote = await remoteRemoveBackground(uri);
@@ -30,7 +48,7 @@ export async function removeBackgroundFallback(uri: string): Promise<string> {
   const { removeBackground } = await loadImgly();
 
   // Transparent-background PNG of just the subject.
-  const cutout = await removeBackground(uri);
+  const cutout = await removeBackground(uri, FAST_CONFIG);
 
   // Composite the cutout over white so it reads as a product shot.
   const bitmap = await createImageBitmap(cutout);

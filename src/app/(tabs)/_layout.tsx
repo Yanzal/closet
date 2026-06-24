@@ -1,16 +1,24 @@
 import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { AddSheet } from '@/components/add-sheet';
 import { TabBar, TabItem } from '@/components/tab-bar';
 import { Ionicons, MaterialCommunityIcons } from '@/components/ui/icon';
 import { palette } from '@/constants/theme';
+import { preloadBeautify } from '@/lib/ai/beautify';
+import { useAutoLocate } from '@/lib/geo';
 
 const ACTIVE = palette.ink;
 const INACTIVE = palette.gray;
 
 export default function TabsLayout() {
   const [addOpen, setAddOpen] = useState(false);
+  useAutoLocate();
+  useEffect(() => {
+    // Warm up the background-removal model in the background so the first beautify is fast.
+    const t = setTimeout(() => preloadBeautify(), 1500);
+    return () => clearTimeout(t);
+  }, []);
 
   return (
     <>
