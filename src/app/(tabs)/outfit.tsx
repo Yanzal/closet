@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { MonthCalendar } from '@/components/calendar/month-calendar';
 import { HeaderActions } from '@/components/header-actions';
+import { OutfitCreateSheet } from '@/components/outfit/create-sheet';
 import { OutfitPreview } from '@/components/outfit/outfit-preview';
 import { TopBar } from '@/components/top-bar';
 import { TripsPane } from '@/components/trips/trips-pane';
@@ -24,6 +25,7 @@ type GridEntry = { create: true } | Outfit;
 export default function OutfitScreen() {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('Outfit');
+  const [createOpen, setCreateOpen] = useState(false);
   const outfits = useCloset((s) => s.outfits);
   const items = useCloset((s) => s.items);
 
@@ -48,7 +50,7 @@ export default function OutfitScreen() {
             title="Create outfit"
             full={false}
             leftIcon={<Ionicons name="add" size={18} color="#fff" />}
-            onPress={() => router.push('/outfit/builder')}
+            onPress={() => setCreateOpen(true)}
             style={{ marginTop: 4 }}
           />
         </Card>
@@ -61,7 +63,7 @@ export default function OutfitScreen() {
           renderItem={(e, _i, size) =>
             'create' in e ? (
               <Pressable
-                onPress={() => router.push('/outfit/builder')}
+                onPress={() => setCreateOpen(true)}
                 style={({ pressed }) => [styles.createTile, { height: size }, pressed ? { opacity: 0.7 } : null]}>
                 <Ionicons name="add" size={26} color={palette.gray} />
                 <Txt variant="small" color="textMuted">New outfit</Txt>
@@ -82,6 +84,8 @@ export default function OutfitScreen() {
           }
         />
       )}
+
+      <OutfitCreateSheet visible={createOpen} onClose={() => setCreateOpen(false)} />
     </Screen>
   );
 }

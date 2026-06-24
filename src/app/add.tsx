@@ -17,6 +17,7 @@ import { Txt } from '@/components/ui/text';
 import { TopBar } from '@/components/top-bar';
 import { palette, Radius, Spacing } from '@/constants/theme';
 import { CATEGORIES, COLOR_OPTIONS, colorHex, SEASONS } from '@/lib/categories';
+import { FITS, MATERIALS, OCCASIONS, PATTERNS, STYLES } from '@/lib/attributes';
 import type { Category, Season } from '@/lib/types';
 import { useCloset } from '@/store/closet';
 
@@ -51,10 +52,23 @@ export default function AddScreen() {
   const [price, setPrice] = useState('');
   const wishlist = params.wishlist === '1';
 
+  // Detail view (mockups 7395–7397): richer optional attributes.
+  const [detail, setDetail] = useState(false);
+  const [occasions, setOccasions] = useState<string[]>([]);
+  const [material, setMaterial] = useState<string[]>([]);
+  const [pattern, setPattern] = useState<string | undefined>();
+  const [fit, setFit] = useState<string | undefined>();
+  const [style, setStyle] = useState<string | undefined>();
+  const [rating, setRating] = useState(0);
+
   const toggleColor = (c: string) =>
     setColors((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
   const toggleSeason = (s: Season) =>
     setSeasons((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
+  const toggleIn = (set: (fn: (p: string[]) => string[]) => void) => (v: string) =>
+    set((p) => (p.includes(v) ? p.filter((x) => x !== v) : [...p, v]));
+  const pickOne = (cur: string | undefined, set: (v: string | undefined) => void) => (v: string) =>
+    set(cur === v ? undefined : v);
 
   const pick = async (useCamera: boolean) => {
     try {
@@ -98,6 +112,12 @@ export default function AddScreen() {
       seasons,
       price: price ? Number(price) || undefined : undefined,
       wishlist: wishlist || undefined,
+      occasions: occasions.length ? occasions : undefined,
+      material: material.length ? material : undefined,
+      pattern,
+      fit,
+      style,
+      rating: rating || undefined,
     });
     router.replace('/added');
   };
@@ -126,7 +146,15 @@ export default function AddScreen() {
     <Screen header={header} bottomInset={false}>
       <Stack.Screen options={{ presentation: 'modal', headerShown: false, animation: 'slide_from_bottom' }} />
 
-      <Txt variant="h2">{wishlist ? 'Add to wishlist' : 'Add item'}</Txt>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Txt variant="h2">{wishlist ? 'Add to wishlist' : 'Add item'}</Txt>
+        <Pressable
+          onPress={() => setDetail((d) => !d)}
+          style={({ pressed }) => [styles.viewToggle, pressed ? { opacity: 0.6 } : null]}>
+          <Ionicons name={detail ? 'options' : 'options-outline'} size={15} color={palette.ink} />
+          <Txt variant="caption">{detail ? 'Simple view' : 'Detail view'}</Txt>
+        </Pressable>
+      </View>
       <Txt variant="small" color="textMuted" style={{ marginTop: 4 }}>
         Snap or upload a photo, then tag it. We&apos;ll clean up the background automatically.
       </Txt>
@@ -221,6 +249,64 @@ export default function AddScreen() {
         />
       </Field>
 
+      {detail ? (
+        <>
+          <Field label="Rating">
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {[1, 2, 3, 4, 5].map((n) => (
+                <Pressable key={n} onPress={() => setRating(rating === n ? 0 : n)} hitSlop={4}>
+                  <Ionicons
+                    name={n <= rating ? 'star' : 'star-outline'}
+                    size={26}
+                    color={n <= rating ? palette.amber : palette.silver}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          </Field>
+
+          <Field label="Occasion">
+            <View style={styles.wrap}>
+              {OCCASIONS.map((o) => (
+                <Chip key={o} label={o} selected={occasions.includes(o)} onPress={() => toggleIn(setOccasions)(o)} />
+              ))}
+            </View>
+          </Field>
+
+          <Field label="Material">
+            <View style={styles.wrap}>
+              {MATERIALS.map((m) => (
+                <Chip key={m} label={m} selected={material.includes(m)} onPress={() => toggleIn(setMaterial)(m)} />
+              ))}
+            </View>
+          </Field>
+
+          <Field label="Pattern">
+            <View style={styles.wrap}>
+              {PATTERNS.map((p) => (
+                <Chip key={p} label={p} selected={pattern === p} onPress={() => pickOne(pattern, setPattern)(p)} />
+              ))}
+            </View>
+          </Field>
+
+          <Field label="Fit">
+            <View style={styles.wrap}>
+              {FITS.map((f) => (
+                <Chip key={f} label={f} selected={fit === f} onPress={() => pickOne(fit, setFit)(f)} />
+              ))}
+            </View>
+          </Field>
+
+          <Field label="Style">
+            <View style={styles.wrap}>
+              {STYLES.map((s) => (
+                <Chip key={s} label={s} selected={style === s} onPress={() => pickOne(style, setStyle)(s)} />
+              ))}
+            </View>
+          </Field>
+        </>
+      ) : null}
+
       <Button title={wishlist ? 'Save to wishlist' : 'Save to closet'} onPress={onSave} disabled={processing} style={{ marginTop: Spacing.xxl }} />
     </Screen>
   );
@@ -266,4 +352,14 @@ const styles = StyleSheet.create({
   },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   swatch: { width: 12, height: 12, borderRadius: 6, borderWidth: 1, borderColor: palette.hairline },
+  viewToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: Radius.pill,
+    borderWidth: 1,
+    borderColor: palette.hairline,
+  },
 });

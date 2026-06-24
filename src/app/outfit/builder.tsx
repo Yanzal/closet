@@ -13,6 +13,7 @@ import { Screen } from '@/components/ui/screen';
 import { Txt } from '@/components/ui/text';
 import { UnderlineTabs } from '@/components/ui/underline-tabs';
 import { palette, Radius, Spacing } from '@/constants/theme';
+import { buildLookNodes, suggestOutfit } from '@/lib/ai/stylist';
 import { CATEGORY_KEYS } from '@/lib/categories';
 import { fmtDayShort, todayKey } from '@/lib/date';
 import { uid } from '@/lib/id';
@@ -26,7 +27,7 @@ const MAX_SCALE = 2.6;
 
 export default function OutfitBuilderScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, mode } = useLocalSearchParams<{ id?: string; mode?: string }>();
   const items = useCloset((s) => s.items);
   const outfits = useCloset((s) => s.outfits);
   const addOutfit = useCloset((s) => s.addOutfit);
@@ -65,6 +66,15 @@ export default function OutfitBuilderScreen() {
       cancelled = true;
     };
   }, [homeCity]);
+
+  // "Acloset Layout" mode: pre-fill the canvas with a neatly-arranged suggested look.
+  useEffect(() => {
+    if (mode === 'layout' && !editing && nodes.length === 0 && items.length > 0) {
+      const look = suggestOutfit(items, 'mild');
+      if (look.length) setNodes(buildLookNodes(look));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, items.length]);
 
   const toUnit = (c: number) => (tempUnit === 'F' ? Math.round((c * 9) / 5 + 32) : c);
 
