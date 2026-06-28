@@ -55,6 +55,11 @@ export default function ClosetScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.quickRow}>
         <QuickAction
+          label="Import"
+          onPress={() => router.push('/import')}
+          icon={<Ionicons name="cloud-download-outline" size={22} color={palette.ink} />}
+        />
+        <QuickAction
           label="Style stats"
           onPress={() => router.push('/stats')}
           icon={<Ionicons name="trending-up" size={22} color={palette.ink} />}
